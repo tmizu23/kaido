@@ -97,7 +97,7 @@ int main(int argc, char ** argv)
 
     for (int i = start[div]; i < end[div]; i++) 
     {
-//      printf("%d\n",i);
+      //printf("%d\n",i);
         for (int j = 0; j < nXSize; j++) 
         {
             #pragma omp critical
