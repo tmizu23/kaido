@@ -5,18 +5,17 @@ gdalとOpenMPを利用しています。
 
 #使い方
 ```
-kaido_mp.exe input.tif output.tif radius type_no div_count
+kaido.exe input.tif output.tif radius type_no
 
 radius 集計半径
 type_no 地上開度:1 地下開度:2 尾根谷度:3
-div_count 分割数（これなんだったけ？）
 ```
 
 
-例 半径250mの地上開度を4スレッドで計算
+例 半径250mの地上開度を計算
 
 ```
-kaido_mp.exe demUTM.tif tijyoukaido.tif 250 1 4
+kaido.exe demUTM.tif tijyoukaido.tif 250 1
 ```
 
 #参考

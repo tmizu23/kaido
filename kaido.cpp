@@ -1,11 +1,15 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include <stdlib.h>
-#define _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES //M_PI
 #include <math.h>
 #include "gdal_priv.h"
 #include <omp.h>
 #include "cpl_conv.h"
-    
+
+//メモリが固定なので、オーバーするとエラーになるかも
+//その場合、逐次計算に変更が必要(TODO)
+
+//type 1:地上開度 2:地下開度 3:尾根谷度
 double getKaido(int x , int y,double cellsizeX,double R,int nXSize,int nYSize,float *data,int type){
    int iDifX[] = {0,1,1,1,0,-1,-1,-1};
    int iDifY[] = {1,1,0,-1,-1,-1,0,1};
@@ -66,7 +70,7 @@ int main(int argc, char ** argv){
     const float radians_to_degrees = 180.0 / M_PI;
 
     CPLSetConfigOption( "GDAL_CACHEMAX", "1024" );
-    //CPLSetConfigOption( "GDAL_DATA", "data" );
+    CPLSetConfigOption( "GDAL_DATA", "data" );
     GDALDataset *poDataset,*poKaidoDS;
     GDALRasterBand  *poBand,*poKaidoBand;
     GDALDriver *poDriver;
@@ -92,8 +96,8 @@ int main(int argc, char ** argv){
     poKaidoBand = poKaidoDS->GetRasterBand(1);
     poKaidoBand->SetNoDataValue(-9999);   
       
-    float *bigwin  = (float *) VSIMalloc3(nYSize,nXSize,sizeof(float));
-    poBand->RasterIO( GF_Read, 0, 0, nXSize,nYSize ,bigwin, nXSize, nYSize, GDT_Float32, 0, 0 );
+    float *data  = (float *) VSIMalloc3(nYSize,nXSize,sizeof(float));
+    poBand->RasterIO( GF_Read, 0, 0, nXSize,nYSize ,data, nXSize, nYSize, GDT_Float32, 0, 0 );
 
     double kaido;
     float kaidoBuf[50000];
@@ -118,7 +122,7 @@ int main(int argc, char ** argv){
            p=p+nXSize;
 		}
         for (int x = 0; x < nXSize; x++){
-            kaido=getKaido(x,y,cellsizeX,R,nXSize,nYSize,bigwin,type);
+            kaido=getKaido(x,y,cellsizeX,R,nXSize,nYSize,data,type);
             if (kaido==-100){
                 kaidoBuf[x] = nullValue;
             }else{
@@ -128,7 +132,7 @@ int main(int argc, char ** argv){
         poKaidoBand->RasterIO( GF_Write, 0, y, nXSize, 1, kaidoBuf, nXSize, 1, GDT_Float32, 0, 0 ); 
     }
     printf("100\n");
-    VSIFree(bigwin);
+    VSIFree(data);
     delete poKaidoDS;
     delete poDataset;
     return 0;
