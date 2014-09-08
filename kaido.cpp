@@ -10,7 +10,7 @@
 //その場合、逐次計算に変更が必要(TODO)
 
 //type 1:地上開度 2:地下開度 3:尾根谷度
-double getKaido(int x , int y,double cellsizeX,double R,int nXSize,int nYSize,float *data,int type){
+double getKaido(int x , int y,double cellsizeX,double R,int nXSize,int nYSize,float *data,int type,float nullValue){
    int iDifX[] = {0,1,1,1,0,-1,-1,-1};
    int iDifY[] = {1,1,0,-1,-1,-1,0,1};
    double iDifL[] = {1,1.41421356,1,1.41421356,1,1.41421356,1,1.41421356};
@@ -29,7 +29,7 @@ double getKaido(int x , int y,double cellsizeX,double R,int nXSize,int nYSize,fl
        while(dDist < R){
            xx = x + iDifX[i]*j;
            yy = y + iDifY[i]*j;
-           if( 0<=xx && xx<nXSize && 0<=yy && yy<nYSize){
+           if( 0<=xx && xx<nXSize && 0<=yy && yy<nYSize && data[nXSize*yy+xx]!=nullValue){
                dDifHeight = data[nXSize*yy+xx] - data[nXSize*y+x];
                dAngle = atan(dDifHeight/dDist);
                if(dAngle > maxAngle[i]) maxAngle[i] = dAngle;
@@ -56,7 +56,7 @@ int main(int argc, char ** argv){
     if(argc < 5){
      printf("###############################\n");
      printf("USAGE:\n");
-     printf("kaido_mp.exe input.tif output.tif R type\n");
+     printf("kaido.exe input.tif output.tif R type\n");
      printf("type 1:chijyou 2:chika 3:onetani\n");
      printf("###############################\n");
      exit(1);
@@ -80,21 +80,22 @@ int main(int argc, char ** argv){
     GDALAllRegister(); 
     poDataset = (GDALDataset *) GDALOpen( pszFilename, GA_ReadOnly );
     poBand = poDataset->GetRasterBand( 1 );
+    
     poDataset->GetGeoTransform( adfGeoTransform );
 
     const double cellsizeY = adfGeoTransform[5];
     const double cellsizeX = adfGeoTransform[1];
-    const float nullValue = -9999;
     const int   nXSize = poBand->GetXSize();
     const int   nYSize = poBand->GetYSize();
-    
+    const float nullValue = poBand->GetNoDataValue();
+
     poDriver = GetGDALDriverManager()->GetDriverByName("GTiff");
     papszOptions = CSLSetNameValue( papszOptions, "PROFILE", "GeoTIFF" );
     poKaidoDS = poDriver->Create(pszKaidoFilename,nXSize,nYSize,1,GDT_Float32, papszOptions );
     poKaidoDS->SetGeoTransform( adfGeoTransform );    
     poKaidoDS->SetProjection( poDataset->GetProjectionRef() );
     poKaidoBand = poKaidoDS->GetRasterBand(1);
-    poKaidoBand->SetNoDataValue(-9999);   
+    poKaidoBand->SetNoDataValue(nullValue);   
       
     float *data  = (float *) VSIMalloc3(nYSize,nXSize,sizeof(float));
     poBand->RasterIO( GF_Read, 0, 0, nXSize,nYSize ,data, nXSize, nYSize, GDT_Float32, 0, 0 );
@@ -122,7 +123,7 @@ int main(int argc, char ** argv){
            p=p+nXSize;
 		}
         for (int x = 0; x < nXSize; x++){
-            kaido=getKaido(x,y,cellsizeX,R,nXSize,nYSize,data,type);
+            kaido=getKaido(x,y,cellsizeX,R,nXSize,nYSize,data,type,nullValue);
             if (kaido==-100){
                 kaidoBuf[x] = nullValue;
             }else{
